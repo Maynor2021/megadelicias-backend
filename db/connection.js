@@ -1,16 +1,50 @@
-const mysql = require('mysql2/promise');
-const dotenv = require('dotenv');
+// config/database.js
+const sql = require('mssql');
 
-dotenv.config();
+/*const config = {
+    user:'mr',
+    password: 'admin',
+    server: 'DESKTOP-G4U7372',
+    database: 'MegadeliciasDB',  // Importante: agregar la base de datos
+    port: 1433,
+    options: {
+        encrypt: false,
+        trustServerCertificate: true,
+        enableArithAbort: true
+    }
+};*/
+const config = {
+    user: 'sa',
+     password: 'admin',
+      server: 'DESKTOP-G4U7372',
+        database: 'MegadeliciasDB', 
+      options: {
+       encrypt: false,
+        trustServerCertificate: true
+    }
+};
 
-const pool = mysql.createPool({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0,
-});
+const poolPromise = new sql.ConnectionPool(config)
+  .connect()
+  .then(pool => {
+    console.log('✅ Conectado a SQL Server exitosamente');
+    return pool;
+  })
+  .catch(err => console.error('❌ Error en conexión SQL Server:', err));
 
-module.exports = pool;
+const executeQuery = async (query, params = []) => {
+  const pool = await poolPromise;
+  const request = pool.request();
+
+  // Agrega parámetros como @param0, @param1, etc.
+  params.forEach((value, index) => {
+    request.input(`param${index}`, value);
+  });
+
+  const result = await request.query(query);
+  return result;
+};
+
+module.exports = {
+  executeQuery
+};
