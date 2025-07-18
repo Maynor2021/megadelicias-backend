@@ -3,7 +3,8 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/user.model');
 
 const register = async (req, res) => {
-  const { nombreCompleto, usuario, correo,  contraseña, rolID } = req.body;
+  console.log('Body recibido:', req.body);
+  const { nombreCompleto, usuario, correo, contraseña, rolID } = req.body;
 
   // Validación básica
   if (!nombreCompleto || !usuario || !correo || !contraseña || !rolID) {
@@ -11,15 +12,22 @@ const register = async (req, res) => {
   }
 
   try {
-    const existingUser = await User.findByEmail(correo);
-    if (existingUser) {
+    // Verificar si el correo ya existe
+    const existingUserByEmail = await User.findByEmail(correo);
+    if (existingUserByEmail) {
       return res.status(409).json({ message: 'Correo ya registrado' });
     }
 
+    // Verificar si el nombre de usuario ya existe
+    const existingUserByUsername = await User.findByUsername(usuario);
+    if (existingUserByUsername) {
+      return res.status(409).json({ message: 'Nombre de usuario ya existe' });
+    }
+
     console.log('Password recibido:', contraseña);
-if (!contraseña) {
-  return res.status(400).json({ message: 'La contraseña es requerida' });
-}
+    if (!contraseña) {
+      return res.status(400).json({ message: 'La contraseña es requerida' });
+    }
 
     // Encriptar contraseña
     const passwordHash = await bcrypt.hash(contraseña, 10);
@@ -33,13 +41,15 @@ if (!contraseña) {
       rolID
     });
 
-    res.status(201).json({ message: 'Usuario registrado correctamente', id: result.insertId });
+    res.status(201).json({ 
+      message: 'Usuario registrado correctamente', 
+      id: result.insertId 
+    });
   } catch (error) {
     console.error('Error en register:', error);
     res.status(500).json({ message: 'Error en el servidor' });
   }
 };
-
 const login = async (req, res) => {
   console.log('Body recibido:', req.body);
   try {
