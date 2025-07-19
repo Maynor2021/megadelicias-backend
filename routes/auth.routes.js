@@ -1,14 +1,16 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const router = express.Router();
-const { login, register } = require('../controllers/auth.controller');
+const { login, register, getRoles } = require('../controllers/auth.controller');
 
 // Ruta de login
 router.post('/login', login);
 
-// Ruta de registro (si la usas)
+// Ruta de registro
 router.post('/register', register);
 
+// Ruta para obtener roles
+router.get('/roles', getRoles);
 
 // Ruta de verificación de token
 router.get('/verify', (req, res) => {

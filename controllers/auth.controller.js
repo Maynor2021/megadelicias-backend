@@ -4,10 +4,12 @@ const User = require('../models/user.model');
 
 const register = async (req, res) => {
   console.log('Body recibido:', req.body);
+  
   const { nombreCompleto, usuario, correo, contraseña, rolID } = req.body;
 
   // Validación básica
   if (!nombreCompleto || !usuario || !correo || !contraseña || !rolID) {
+    console.log('Validación falló. Valores:', { nombreCompleto, usuario, correo, contraseña, rolID });
     return res.status(400).json({ message: 'Faltan campos obligatorios' });
   }
 
@@ -19,27 +21,29 @@ const register = async (req, res) => {
     }
 
     // Verificar si el nombre de usuario ya existe
-    const existingUserByUsername = await User.findByUsername(usuario);
+    const existingUserByUsername = await User.findByUsuario(usuario);
     if (existingUserByUsername) {
       return res.status(409).json({ message: 'Nombre de usuario ya existe' });
     }
 
     console.log('Password recibido:', contraseña);
-    if (!contraseña) {
-      return res.status(400).json({ message: 'La contraseña es requerida' });
-    }
-
+    
     // Encriptar contraseña
     const passwordHash = await bcrypt.hash(contraseña, 10);
 
-    // Crear usuario
-    const result = await User.create({
+    // Crear objeto para el usuario
+    const userData = {
       nombreCompleto,
       usuario,
       correo,
       passwordHash,
       rolID
-    });
+    };
+
+    console.log('Objeto userData a enviar:', userData);
+
+    // Crear usuario
+    const result = await User.create(userData);
 
     res.status(201).json({ 
       message: 'Usuario registrado correctamente', 
@@ -47,11 +51,13 @@ const register = async (req, res) => {
     });
   } catch (error) {
     console.error('Error en register:', error);
-    res.status(500).json({ message: 'Error en el servidor' });
+    res.status(500).json({ message: 'Error en el servidor', error: error.message });
   }
 };
+
 const login = async (req, res) => {
   console.log('Body recibido:', req.body);
+  
   try {
     const { correo, contraseña } = req.body;
 
@@ -69,17 +75,45 @@ const login = async (req, res) => {
       return res.status(401).json({ message: 'Contraseña incorrecta' });
     }
 
+    // Actualizar último acceso
+    await User.updateLastAccess(user.EmpleadoID);
+
     const token = jwt.sign(
-      { id: user.EmpleadoID, rol: user.RolID, nombre: user.NombreCompleto },
+      { 
+        id: user.EmpleadoID, 
+        rol: user.RolID, 
+        nombre: user.NombreCompleto,
+        usuario: user.Usuario 
+      },
       process.env.JWT_SECRET,
       { expiresIn: '8h' }
     );
 
-    res.json({ message: 'Login exitoso', token });
+    res.json({ 
+      message: 'Login exitoso', 
+      token,
+      user: {
+        id: user.EmpleadoID,
+        nombreCompleto: user.NombreCompleto,
+        usuario: user.Usuario,
+        correo: user.Correo,
+        rol: user.NombreRol
+      }
+    });
   } catch (error) {
     console.error('Error en login:', error);
     res.status(500).json({ message: 'Error en el servidor', error: error.message });
   }
 };
 
-module.exports = { register, login };
+const getRoles = async (req, res) => {
+  try {
+    const roles = await User.getRoles();
+    res.json(roles);
+  } catch (error) {
+    console.error('Error obteniendo roles:', error);
+    res.status(500).json({ message: 'Error en el servidor', error: error.message });
+  }
+};
+
+module.exports = { register, login, getRoles };

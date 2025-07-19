@@ -7,7 +7,9 @@ const create = async ({ nombreCompleto, usuario, correo, passwordHash, rolID }) 
     VALUES (@param0, @param1, @param2, @param3, @param4)
   `;
   
-  const result = await executeQuery(query, [nombreCompleto, usuario, correo, passwordHash, rolID]);
+  const params = [nombreCompleto, usuario, correo, passwordHash, rolID];
+  
+  const result = await executeQuery(query, params);
   return { insertId: result.recordset[0].EmpleadoID };
 };
 
@@ -86,6 +88,7 @@ const getRoles = async () => {
     SELECT RolID, NombreRol, Descripcion 
     FROM Roles 
     WHERE Activo = 1
+    ORDER BY NombreRol
   `;
   
   const result = await executeQuery(query, []);
