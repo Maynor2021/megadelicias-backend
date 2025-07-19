@@ -19,9 +19,11 @@ app.use(express.json());
 // Rutas
 const authRoutes = require('./routes/auth.routes');
 const platoRoutes = require('./routes/plato.routes');
-
+const contabilidadRoutes = require('./routes/contabilidad.routes');
+//usar rutas
 app.use('/api/auth', authRoutes);
 app.use('/api/platos', platoRoutes);
+app.use('/api/contabilidad', contabilidadRoutes);
 
 // Puerto
 const PORT = process.env.PORT || 4000;

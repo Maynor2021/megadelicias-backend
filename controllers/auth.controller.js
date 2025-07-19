@@ -114,6 +114,132 @@ const getRoles = async (req, res) => {
     console.error('Error obteniendo roles:', error);
     res.status(500).json({ message: 'Error en el servidor', error: error.message });
   }
+};// Crear asiento contable manual
+const crearAsiento = async (req, res) => {
+  try {
+    const { tipoAsiento, descripcion, detalles } = req.body;
+    const empleadoID = req.user.id;
+    
+    // Validaciones
+    if (!tipoAsiento || !descripcion || !detalles || detalles.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Faltan datos requeridos'
+      });
+    }
+    
+    // Validar que el asiento esté balanceado
+    const balanceado = contabilidadModel.validarBalanceAsiento(detalles);
+    if (!balanceado) {
+      return res.status(400).json({
+        success: false,
+        message: 'El asiento no está balanceado (Debe ≠ Haber)'
+      });
+    }
+    
+    const resultado = await contabilidadModel.crearAsientoContable({
+      tipoAsiento,
+      descripcion,
+      empleadoID,
+      detalles
+    });
+    
+    res.status(201).json({
+      success: true,
+      message: 'Asiento contable creado exitosamente',
+      data: resultado
+    });
+  } catch (error) {
+    console.error('Error al crear asiento:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Error al crear asiento contable'
+    });
+  }
 };
 
-module.exports = { register, login, getRoles };
+// Obtener asiento por ID
+const getAsiento = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const asiento = await contabilidadModel.getAsientoById(parseInt(id));
+    
+    if (!asiento) {
+      return res.status(404).json({
+        success: false,
+        message: 'Asiento no encontrado'
+      });
+    }
+    
+    res.json({
+      success: true,
+      data: asiento
+    });
+  } catch (error) {
+    console.error('Error al obtener asiento:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al obtener asiento contable'
+    });
+  }
+};
+
+// Actualizar asiento
+const actualizarAsiento = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { descripcion, detalles } = req.body;
+    
+    // Validar balance si se actualizan detalles
+    if (detalles && detalles.length > 0) {
+      const balanceado = contabilidadModel.validarBalanceAsiento(detalles);
+      if (!balanceado) {
+        return res.status(400).json({
+          success: false,
+          message: 'El asiento no está balanceado (Debe ≠ Haber)'
+        });
+      }
+    }
+    
+    await contabilidadModel.actualizarAsientoContable(parseInt(id), {
+      descripcion,
+      detalles
+    });
+    
+    res.json({
+      success: true,
+      message: 'Asiento actualizado exitosamente'
+    });
+  } catch (error) {
+    console.error('Error al actualizar asiento:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Error al actualizar asiento contable'
+    });
+  }
+};
+
+// Anular asiento
+const anularAsiento = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    await contabilidadModel.anularAsientoContable(parseInt(id));
+    
+    res.json({
+      success: true,
+      message: 'Asiento anulado exitosamente'
+    });
+  } catch (error) {
+    console.error('Error al anular asiento:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Error al anular asiento contable'
+    });
+  }
+};
+
+module.exports = { register, login, getRoles,crearAsiento,
+  getAsiento,
+  actualizarAsiento,
+  anularAsiento };
