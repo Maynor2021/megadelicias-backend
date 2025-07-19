@@ -165,6 +165,124 @@ const getAnalisisRentabilidad = async (req, res) => {
   }
 };
 
+// ======== FUNCIONES FALTANTES PARA ASIENTOS CONTABLES ========
+
+// Crear asiento contable
+const crearAsiento = async (req, res) => {
+  try {
+    const asientoData = req.body;
+    const empleadoID = req.user.id; // Del token JWT
+    
+    // Validación básica
+    if (!asientoData.concepto || !asientoData.detalles || !Array.isArray(asientoData.detalles)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Se requieren concepto y detalles del asiento'
+      });
+    }
+    
+    const asiento = await contabilidadModel.crearAsiento(asientoData, empleadoID);
+    
+    res.status(201).json({
+      success: true,
+      message: 'Asiento contable creado exitosamente',
+      data: asiento
+    });
+  } catch (error) {
+    console.error('Error al crear asiento:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al crear asiento contable'
+    });
+  }
+};
+
+// Obtener asiento por ID
+const getAsiento = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const asiento = await contabilidadModel.getAsientoById(id);
+    
+    if (!asiento) {
+      return res.status(404).json({
+        success: false,
+        message: 'Asiento no encontrado'
+      });
+    }
+    
+    res.json({
+      success: true,
+      data: asiento
+    });
+  } catch (error) {
+    console.error('Error al obtener asiento:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al obtener asiento contable'
+    });
+  }
+};
+
+// Actualizar asiento contable
+const actualizarAsiento = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const asientoData = req.body;
+    const empleadoID = req.user.id;
+    
+    const asiento = await contabilidadModel.actualizarAsiento(id, asientoData, empleadoID);
+    
+    if (!asiento) {
+      return res.status(404).json({
+        success: false,
+        message: 'Asiento no encontrado'
+      });
+    }
+    
+    res.json({
+      success: true,
+      message: 'Asiento actualizado exitosamente',
+      data: asiento
+    });
+  } catch (error) {
+    console.error('Error al actualizar asiento:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al actualizar asiento contable'
+    });
+  }
+};
+
+// Anular asiento contable
+const anularAsiento = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const empleadoID = req.user.id;
+    
+    const resultado = await contabilidadModel.anularAsiento(id, empleadoID);
+    
+    if (!resultado) {
+      return res.status(404).json({
+        success: false,
+        message: 'Asiento no encontrado'
+      });
+    }
+    
+    res.json({
+      success: true,
+      message: 'Asiento anulado exitosamente'
+    });
+  } catch (error) {
+    console.error('Error al anular asiento:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al anular asiento contable'
+    });
+  }
+};
+
+// ======== FIN FUNCIONES FALTANTES ========
+
 // Ejecutar cierre mensual
 const ejecutarCierreMensual = async (req, res) => {
   try {
@@ -274,6 +392,10 @@ module.exports = {
   getEstadoResultados,
   getFlujoCaja,
   getAnalisisRentabilidad,
+  crearAsiento,        // ✅ AGREGADA
+  getAsiento,          // ✅ AGREGADA
+  actualizarAsiento,   // ✅ AGREGADA
+  anularAsiento,       // ✅ AGREGADA
   ejecutarCierreMensual,
   generarBalanceGeneral,
   generarLibroVentas,

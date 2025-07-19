@@ -154,9 +154,17 @@ const getCuentasContables = async (tipo = null) => {
   const result = await executeQuery(query, params);
   return result.recordset;
 };
-// Crear asiento contable manual
-const crearAsientoContable = async (asiento) => {
-  const { tipoAsiento, descripcion, empleadoID, detalles } = asiento;
+
+// ===== FUNCIONES PARA ASIENTOS CONTABLES =====
+
+// Crear asiento contable
+const crearAsiento = async (asientoData, empleadoID) => {
+  const { concepto, detalles } = asientoData;
+  
+  // Validar que el asiento esté balanceado
+  if (!validarBalanceAsiento(detalles)) {
+    throw new Error('El asiento no está balanceado (Debe ≠ Haber)');
+  }
   
   // Obtener período actual
   const periodoQuery = `
@@ -185,7 +193,7 @@ const crearAsientoContable = async (asiento) => {
   `;
   
   const asientoResult = await executeQuery(asientoQuery, [
-    numeroAsiento, tipoAsiento, descripcion, empleadoID, periodoID
+    numeroAsiento, 'Manual', concepto, empleadoID, periodoID
   ]);
   
   const asientoID = asientoResult.recordset[0].AsientoID;
@@ -251,8 +259,8 @@ const getAsientoById = async (asientoID) => {
 };
 
 // Actualizar asiento contable
-const actualizarAsientoContable = async (asientoID, datos) => {
-  const { descripcion, detalles } = datos;
+const actualizarAsiento = async (asientoID, datos, empleadoID) => {
+  const { concepto, detalles } = datos;
   
   // Verificar que el asiento existe y no está en un período cerrado
   const verificarQuery = `
@@ -265,7 +273,7 @@ const actualizarAsientoContable = async (asientoID, datos) => {
   const verificarResult = await executeQuery(verificarQuery, [asientoID]);
   
   if (!verificarResult.recordset[0]) {
-    throw new Error('Asiento no encontrado');
+    return null;
   }
   
   if (verificarResult.recordset[0].Estado === 'Cerrado') {
@@ -273,17 +281,21 @@ const actualizarAsientoContable = async (asientoID, datos) => {
   }
   
   // Actualizar descripción si se proporciona
-  if (descripcion) {
+  if (concepto) {
     const updateQuery = `
       UPDATE AsientosContables 
       SET Descripcion = @param0 
       WHERE AsientoID = @param1
     `;
-    await executeQuery(updateQuery, [descripcion, asientoID]);
+    await executeQuery(updateQuery, [concepto, asientoID]);
   }
   
-  // Si se proporcionan nuevos detalles, eliminar los anteriores y crear nuevos
+  // Si se proporcionan nuevos detalles, validar balanceo y actualizar
   if (detalles && detalles.length > 0) {
+    if (!validarBalanceAsiento(detalles)) {
+      throw new Error('El asiento no está balanceado (Debe ≠ Haber)');
+    }
+    
     // Eliminar detalles anteriores
     await executeQuery('DELETE FROM DetalleAsientosContables WHERE AsientoID = @param0', [asientoID]);
     
@@ -308,8 +320,8 @@ const actualizarAsientoContable = async (asientoID, datos) => {
   return { success: true };
 };
 
-// Anular asiento contable (soft delete)
-const anularAsientoContable = async (asientoID) => {
+// Anular asiento contable
+const anularAsiento = async (asientoID, empleadoID) => {
   // Verificar que el asiento existe y no está en un período cerrado
   const verificarQuery = `
     SELECT A.*, P.Estado 
@@ -321,7 +333,7 @@ const anularAsientoContable = async (asientoID) => {
   const verificarResult = await executeQuery(verificarQuery, [asientoID]);
   
   if (!verificarResult.recordset[0]) {
-    throw new Error('Asiento no encontrado');
+    return null;
   }
   
   if (verificarResult.recordset[0].Estado === 'Cerrado') {
@@ -342,11 +354,12 @@ const anularAsientoContable = async (asientoID) => {
 
 // Validar que un asiento esté balanceado
 const validarBalanceAsiento = (detalles) => {
-  const totalDebe = detalles.reduce((sum, d) => sum + (d.debe || 0), 0);
-  const totalHaber = detalles.reduce((sum, d) => sum + (d.haber || 0), 0);
+  const totalDebe = detalles.reduce((sum, d) => sum + (parseFloat(d.debe) || 0), 0);
+  const totalHaber = detalles.reduce((sum, d) => sum + (parseFloat(d.haber) || 0), 0);
   
   return Math.abs(totalDebe - totalHaber) < 0.01; // Permitir diferencia de centavos
 };
+
 module.exports = {
   getPeriodos,
   getPeriodoActual,
@@ -359,9 +372,9 @@ module.exports = {
   generarBalanceGeneral,
   generarLibroVentas,
   getCuentasContables,
-   crearAsientoContable,
+  crearAsiento,              // ✅ Renombrado de crearAsientoContable
   getAsientoById,
-  actualizarAsientoContable,
-  anularAsientoContable,
+  actualizarAsiento,         // ✅ Renombrado de actualizarAsientoContable  
+  anularAsiento,             // ✅ Renombrado de anularAsientoContable
   validarBalanceAsiento
 };
