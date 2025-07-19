@@ -1,15 +1,15 @@
-// config/database.js
+// config/database.example.js
 const sql = require('mssql');
 
 const config = {
-    user: process.env.DB_USER || 'sa',
-    password: process.env.DB_PASSWORD || 'admin',
-    server: process.env.DB_HOST || 'DESKTOP-G4U7372',
-    database: process.env.DB_NAME || 'MegadeliciasDB',
-    port: parseInt(process.env.DB_PORT) || 1433,
+    user: 'TU_USUARIO_DB',
+    password: 'TU_PASSWORD_DB',
+    server: 'TU_SERVIDOR',
+    database: 'TU_BASE_DE_DATOS', 
+    port: 1433,
     options: {
-        encrypt: process.env.DB_ENCRYPT === 'true' || false,
-        trustServerCertificate: process.env.DB_TRUST_CERT !== 'false'
+        encrypt: false,
+        trustServerCertificate: true
     }
 };
 
