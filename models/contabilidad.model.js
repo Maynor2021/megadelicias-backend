@@ -372,9 +372,9 @@ module.exports = {
   generarBalanceGeneral,
   generarLibroVentas,
   getCuentasContables,
-  crearAsiento,              // ✅ Renombrado de crearAsientoContable
+  crearAsiento,              //  Renombrado de crearAsientoContable
   getAsientoById,
-  actualizarAsiento,         // ✅ Renombrado de actualizarAsientoContable  
-  anularAsiento,             // ✅ Renombrado de anularAsientoContable
+  actualizarAsiento,         //  Renombrado de actualizarAsientoContable  
+  anularAsiento,             // Renombrado de anularAsientoContable
   validarBalanceAsiento
 };

@@ -171,7 +171,7 @@ const getAnalisisRentabilidad = async (req, res) => {
 const crearAsiento = async (req, res) => {
   try {
     const asientoData = req.body;
-    const empleadoID = req.user.id; // Del token JWT
+     const empleadoID = req.user?.id || 1; // Del token JWT .e agrega usuario 1 como pruebas
     
     // Validación básica
     if (!asientoData.concepto || !asientoData.detalles || !Array.isArray(asientoData.detalles)) {

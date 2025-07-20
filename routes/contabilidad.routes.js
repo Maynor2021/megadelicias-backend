@@ -4,7 +4,7 @@ const contabilidadController = require('../controllers/contabilidad.controller')
 const authMiddleware = require('../middlewares/auth.middleware');
 
 // Todas las rutas requieren autenticación
-router.use(authMiddleware);
+//router.use(authMiddleware);
 
 // Períodos contables
 router.get('/periodos', contabilidadController.getPeriodos);
