@@ -168,7 +168,7 @@ const getAnalisisRentabilidad = async (req, res) => {
 // ======== FUNCIONES FALTANTES PARA ASIENTOS CONTABLES ========
 
 // Crear asiento contable
-const crearAsiento = async (req, res) => {
+/*const crearAsiento = async (req, res) => {
   try {
     const asientoData = req.body;
      const empleadoID = req.user?.id || 1; // Del token JWT .e agrega usuario 1 como pruebas
@@ -193,6 +193,42 @@ const crearAsiento = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error al crear asiento contable'
+    });
+  }
+};*/
+
+const crearAsiento = async (req, res) => {
+ 
+  try {
+    const asientoData = req.body;
+    const empleadoID = req.user?.id || 1; // Usuario desde token JWT, o 1 por defecto (pruebas)
+
+    // Validación básica
+    if (
+      !asientoData.concepto ||
+      !asientoData.detalles ||
+      !Array.isArray(asientoData.detalles) ||
+      asientoData.detalles.length === 0
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: 'Se requieren concepto y detalles válidos del asiento',
+      });
+    }
+
+    // Si no se proporciona fecha, se usará dentro de la función como fecha actual
+    const asiento = await contabilidadModel.crearAsiento(asientoData, empleadoID);
+
+    res.status(201).json({
+      success: true,
+      message: 'Asiento contable creado exitosamente',
+      data: asiento,
+    });
+  } catch (error) {
+    console.error('Error al crear asiento:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al crear asiento contable',
     });
   }
 };

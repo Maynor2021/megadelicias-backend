@@ -159,21 +159,22 @@ const getCuentasContables = async (tipo = null) => {
 
 // Crear asiento contable
 const crearAsiento = async (asientoData, empleadoID) => {
-  const { concepto, detalles } = asientoData;
+  const { concepto, detalles, fecha, tipoAsiento } = asientoData;
   
   // Validar que el asiento esté balanceado
   if (!validarBalanceAsiento(detalles)) {
     throw new Error('El asiento no está balanceado (Debe ≠ Haber)');
   }
   
-  // Obtener período actual
+  // Obtener período según la fecha del asiento
+  const fechaAsiento = fecha || new Date().toISOString().split('T')[0];
   const periodoQuery = `
     SELECT TOP 1 PeriodoID 
     FROM PeriodosContables 
-    WHERE GETDATE() BETWEEN FechaInicio AND FechaFin 
+    WHERE @param0 BETWEEN FechaInicio AND FechaFin 
     AND Estado = 'Abierto'
   `;
-  const periodoResult = await executeQuery(periodoQuery, []);
+  const periodoResult = await executeQuery(periodoQuery, [fechaAsiento]);
   
   if (!periodoResult.recordset[0]) {
     throw new Error('No hay período contable abierto');
@@ -189,11 +190,11 @@ const crearAsiento = async (asientoData, empleadoID) => {
     INSERT INTO AsientosContables 
     (NumeroAsiento, FechaAsiento, TipoAsiento, Descripcion, EmpleadoID, PeriodoID)
     OUTPUT INSERTED.AsientoID
-    VALUES (@param0, GETDATE(), @param1, @param2, @param3, @param4)
+    VALUES (@param0, @param1, @param2, @param3, @param4, @param5)
   `;
   
   const asientoResult = await executeQuery(asientoQuery, [
-    numeroAsiento, 'Manual', concepto, empleadoID, periodoID
+    numeroAsiento, fechaAsiento, tipoAsiento || 'Manual', concepto, empleadoID, periodoID
   ]);
   
   const asientoID = asientoResult.recordset[0].AsientoID;
@@ -217,6 +218,66 @@ const crearAsiento = async (asientoData, empleadoID) => {
   
   return { asientoID, numeroAsiento };
 };
+/*const crearAsiento = async (asientoData, empleadoID) => {
+  const { concepto, detalles, fecha, tipoAsiento } = asientoData;
+
+  // Validar que el asiento esté balanceado
+  if (!validarBalanceAsiento(detalles)) {
+    throw new Error('El asiento no está balanceado (Debe ≠ Haber)');
+  }
+
+  // Obtener la fecha del asiento, o la fecha actual si no se proporciona
+  const fechaAsiento = fecha || new Date().toISOString().split('T')[0];
+
+  // Buscar el período contable activo correspondiente a la fecha del asiento
+  const periodoQuery = `
+    SELECT TOP 1 PeriodoID 
+    FROM PeriodosContables 
+    WHERE @param0 BETWEEN FechaInicio AND FechaFin 
+    AND Estado = 'Abierto'
+  `;
+
+  const periodoResult = await executeQuery(periodoQuery, [fechaAsiento]);
+
+  if (!periodoResult.recordset[0]) {
+    throw new Error('No hay período contable abierto para la fecha del asiento');
+  }
+
+  const periodoID = periodoResult.recordset[0].PeriodoID;
+
+  // Obtener el siguiente número de asiento
+  const numeroAsiento = await  generarNumeroAsiento();
+
+  // Insertar el asiento contable
+  const asientoQuery = `
+    INSERT INTO AsientosContables 
+    (NumeroAsiento, FechaAsiento, TipoAsiento, Descripcion, EmpleadoID, PeriodoID)
+    OUTPUT INSERTED.AsientoID
+    VALUES (@param0, @param1, @param2, @param3, @param4, @param5)
+  `;
+
+  const asientoResult = await executeQuery(asientoQuery, [
+    numeroAsiento,
+    fechaAsiento,
+    tipoAsiento || 'Manual',
+    concepto,
+    empleadoID,
+    periodoID
+  ]);
+
+  const asientoID = asientoResult.recordset[0].AsientoID;
+
+  // Insertar detalles del asiento
+ // await insertarDetallesAsiento(detalles, asientoID);
+
+  return { asientoID, numeroAsiento };
+};*/
+
+const generarNumeroAsiento = () => {
+  const numero = Math.floor(100000 + Math.random() * 900000);
+  return numero;
+};
+
 
 // Obtener asiento contable por ID
 const getAsientoById = async (asientoID) => {
@@ -259,8 +320,8 @@ const getAsientoById = async (asientoID) => {
 };
 
 // Actualizar asiento contable
-const actualizarAsiento = async (asientoID, datos, empleadoID) => {
-  const { concepto, detalles } = datos;
+/*const actualizarAsiento = async (asientoID, datos, empleadoID) => {
+  const { concepto, detalles, fecha } = datos;
   
   // Verificar que el asiento existe y no está en un período cerrado
   const verificarQuery = `
@@ -280,14 +341,27 @@ const actualizarAsiento = async (asientoID, datos, empleadoID) => {
     throw new Error('No se puede modificar un asiento de un período cerrado');
   }
   
-  // Actualizar descripción si se proporciona
-  if (concepto) {
-    const updateQuery = `
-      UPDATE AsientosContables 
-      SET Descripcion = @param0 
-      WHERE AsientoID = @param1
-    `;
-    await executeQuery(updateQuery, [concepto, asientoID]);
+  // Actualizar descripción y/o fecha si se proporcionan
+  if (concepto || fecha) {
+    let updateQuery = 'UPDATE AsientosContables SET ';
+    const params = [];
+    const updates = [];
+    
+    if (concepto) {
+      updates.push('Descripcion = @param' + params.length);
+      params.push(concepto);
+    }
+    
+    if (fecha) {
+      updates.push('FechaAsiento = @param' + params.length);
+      params.push(fecha);
+    }
+    
+    updateQuery += updates.join(', ');
+    updateQuery += ' WHERE AsientoID = @param' + params.length;
+    params.push(asientoID);
+    
+    await executeQuery(updateQuery, params);
   }
   
   // Si se proporcionan nuevos detalles, validar balanceo y actualizar
@@ -318,6 +392,61 @@ const actualizarAsiento = async (asientoID, datos, empleadoID) => {
   }
   
   return { success: true };
+};*/
+const actualizarAsiento = async (asientoID, datos, empleadoID) => {
+  const { concepto, detalles, fecha } = datos;
+
+  // Verificar que el asiento existe y no está en un período cerrado
+  const verificarQuery = `
+    SELECT A.*, P.Estado 
+    FROM AsientosContables A
+    INNER JOIN PeriodosContables P ON A.PeriodoID = P.PeriodoID
+    WHERE A.AsientoID = @param0
+  `;
+  const verificarResult = await executeQuery(verificarQuery, [asientoID]);
+
+  if (!verificarResult.recordset.length) {
+    throw new Error('Asiento no encontrado');
+  }
+
+  if (verificarResult.recordset[0].Estado === 'Cerrado') {
+    throw new Error('No se puede modificar un asiento de un período cerrado');
+  }
+
+  // Actualizar campos si se proporcionan: descripción y/o fecha
+  if (concepto || fecha) {
+    let updateQuery = 'UPDATE AsientosContables SET ';
+    const params = [];
+    const updates = [];
+
+    if (concepto) {
+      updates.push(`Descripcion = @param${params.length}`);
+      params.push(concepto);
+    }
+
+    if (fecha) {
+      updates.push(`FechaAsiento = @param${params.length}`);
+      params.push(fecha);
+    }
+
+    updateQuery += updates.join(', ');
+    updateQuery += ` WHERE AsientoID = @param${params.length}`;
+    params.push(asientoID);
+
+    await executeQuery(updateQuery, params);
+  }
+
+  // Si hay detalles nuevos, validar y actualizar
+  if (detalles && detalles.length > 0) {
+    if (!validarBalanceAsiento(detalles)) {
+      throw new Error('Los nuevos detalles no están balanceados (Debe ≠ Haber)');
+    }
+
+    await eliminarDetallesAsiento(asientoID);
+   // await insertarDetallesAsiento(detalles, asientoID);
+  }
+
+  return { mensaje: 'Asiento actualizado correctamente' };
 };
 
 // Anular asiento contable
